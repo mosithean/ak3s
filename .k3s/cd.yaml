@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: covid19map-deployment
+  labels:
+    app: covid19map-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: covid19map-app
+  template:
+    metadata:
+      labels:
+        app: covid19map-app
+    spec:
+      containers:
+      - name: covid19map-ct
+        image: docker.ubique.tk/covid:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+      imagePullSecrets:
+      - name: regcred
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: covid19map-service
+spec:
+  selector:
+    app: covid19map-app
+  ports:
+    - protocol: TCP
+      port: 80
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: covid19map-cert
+  namespace: default
+spec:
+  secretName: covid19map-secret
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+  - covid19map.ml
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: covid19map-ingress
+spec:
+  entryPoints:
+    - websecure
+  routes:
+  - match: Host(`covid19map.ml`) && PathPrefix(`/`)
+    kind: Rule
+    services:
+    - name: covid19map-service
+      port: 80
+  tls:
+    secretName: covid19map-secret
