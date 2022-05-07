@@ -23,6 +23,7 @@ concurrency:
 jobs:
   build-and-upload-docker-image:
     runs-on: ubuntu-latest
+    name: Build and upload docker image for AMD64/ARM64/ARMv7
     timeout-minutes: 10
     permissions:
       contents: read
@@ -82,6 +83,7 @@ jobs:
             type=raw,value=latest,enable=${{ env.MASTER_BRANCH }}
             type=semver,pattern={{version}},value=${{ steps.package-version.outputs.current-version }}
             type=raw,value=${{ env.BASEREF }}
+            type=sha
       -
         name: Build and push
         id: docker_build
@@ -92,3 +94,24 @@ jobs:
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: |
+            type=registry,ref=${{ steps.meta.outputs.tags }}
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
+          cache-to: type=inline
+
+  deploy-to-k3s-cluster:
+    needs: [ build-and-upload-docker-image ]
+    name: Test availability of the cluster
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+
+    - name: Deploy a container to K3s
+      uses: wahyd4/kubectl-helm-action@master
+      env:
+        KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
+      with:
+        args: |
+          kubectl apply -f .k3s/cd.yaml
+          kubectl get pods -A
+
