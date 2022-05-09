@@ -101,7 +101,7 @@ jobs:
 
   deploy-to-k3s-cluster:
     needs: [ build-and-upload-docker-image ]
-    name: Test availability of the cluster
+    name: Deploy on K3s cluster via kubectl
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
@@ -112,6 +112,6 @@ jobs:
         KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
       with:
         args: |
-          kubectl apply -f .k3s/cd.yaml
+          kubectl apply -f .github/kubernetes/cd.yaml
           kubectl get pods -A
 

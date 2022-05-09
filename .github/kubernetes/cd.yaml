@@ -1,64 +1,65 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: covid19map-deployment
+  name: ak3s-deployment
   labels:
-    app: covid19map-app
+    app: ak3s-app
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: covid19map-app
+      app: ak3s-app
   template:
     metadata:
       labels:
-        app: covid19map-app
+        app: ak3s-app
     spec:
       containers:
-      - name: covid19map-ct
-        image: docker.ubique.tk/covid:latest
+      - name: ak3s-ct
+        image: ghcr.io/mosithean/ak3s:latest
         imagePullPolicy: Always
         ports:
-        - containerPort: 80
+        - containerPort: 8080
       imagePullSecrets:
-      - name: regcred
+      - name: secret-ghcr-mo
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: covid19map-service
+  name: ak3s-service
 spec:
   selector:
-    app: covid19map-app
+    app: ak3s-app
   ports:
     - protocol: TCP
       port: 80
+      targetPort: 8080
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: covid19map-cert
+  name: ak3s-cert
   namespace: default
 spec:
-  secretName: covid19map-secret
+  secretName: ak3s-secret
   issuerRef:
     name: letsencrypt-prod
     kind: ClusterIssuer
   dnsNames:
-  - covid19map.ml
+  - ak3s.mosithean.tk
 ---
 apiVersion: traefik.containo.us/v1alpha1
 kind: IngressRoute
 metadata:
-  name: covid19map-ingress
+  name: ak3s-ingress
 spec:
   entryPoints:
     - websecure
   routes:
-  - match: Host(`covid19map.ml`) && PathPrefix(`/`)
+  - match: Host(`ak3s.mosithean.tk`) && PathPrefix(`/`)
     kind: Rule
     services:
-    - name: covid19map-service
+    - name: ak3s-service
       port: 80
   tls:
-    secretName: covid19map-secret
+    secretName: ak3s-secret
