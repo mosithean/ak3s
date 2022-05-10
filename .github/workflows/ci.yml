@@ -23,7 +23,7 @@ concurrency:
 jobs:
   build-and-upload-docker-image:
     runs-on: ubuntu-latest
-    name: Build and upload docker image for AMD64/ARM64/ARMv7
+    name: Build and upload multi-platform docker image
     timeout-minutes: 10
     permissions:
       contents: read
@@ -62,8 +62,8 @@ jobs:
       -
         name: Show baseref, NPM version and available plalforms
         run: |
-          echo "BASEREF: ${BASEREF}"
-          echo "NPM-VERSION: ${{ steps.package-version.outputs.current-version }}"
+          echo "BaseRef: ${BASEREF}"
+          echo "NPM version: ${{ steps.package-version.outputs.current-version }}"
           echo "Platforms: ${{ steps.buildx.outputs.platforms }}"
       -
         name: Log in to the Container registry
@@ -104,14 +104,19 @@ jobs:
     name: Deploy on K3s cluster via kubectl
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@master
-
-    - name: Deploy a container to K3s
-      uses: wahyd4/kubectl-helm-action@master
-      env:
-        KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
-      with:
-        args: |
-          kubectl apply -f .github/kubernetes/cd.yaml
-          kubectl get pods -A
+      -
+        uses: actions/checkout@v3
+      -
+        name: Check whether the cluster is available or not
+        run: if [[ $(curl -skm 15 https://k3s.mosithean.tk:6443) ]]; then exit 0; else exit 1; fi
+      -
+        name: Deploy a container to K3s
+        uses: wahyd4/kubectl-helm-action@master
+        if: ${{ success() }}
+        env:
+          KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
+        with:
+          args: |
+            kubectl apply -f .github/kubernetes/cd.yaml
+            kubectl describe pod ak3s-web
 

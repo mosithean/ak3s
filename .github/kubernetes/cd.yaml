@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ak3s-deployment
+  name: ak3s-web
   labels:
     app: ak3s-app
 spec:
@@ -21,12 +21,12 @@ spec:
         ports:
         - containerPort: 8080
       imagePullSecrets:
-      - name: secret-ghcr-mo
+      - name: ghcr-mo-json-secret
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: ak3s-service
+  name: ak3s-svc
 spec:
   selector:
     app: ak3s-app
@@ -41,9 +41,9 @@ metadata:
   name: ak3s-cert
   namespace: default
 spec:
-  secretName: ak3s-secret
+  secretName: ak3s-tls-secret
   issuerRef:
-    name: letsencrypt-prod
+    name: letsencrypt-prod-issuer
     kind: ClusterIssuer
   dnsNames:
   - ak3s.mosithean.tk
@@ -59,7 +59,7 @@ spec:
   - match: Host(`ak3s.mosithean.tk`) && PathPrefix(`/`)
     kind: Rule
     services:
-    - name: ak3s-service
+    - name: ak3s-svc
       port: 80
   tls:
-    secretName: ak3s-secret
+    secretName: ak3s-tls-secret
